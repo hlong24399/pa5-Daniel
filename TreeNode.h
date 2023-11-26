@@ -7,6 +7,7 @@ public:
     LBTreeNode(T data);
     virtual ~LBTreeNode();
     T getData();
+    void setData(T data) { m_data = data; }
 
     template <typename S>
     friend class LBBST;

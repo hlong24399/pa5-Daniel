@@ -5,6 +5,7 @@
 #include <math.h>
 #include <iostream>
 #include "TreeNode.h"
+#include "StudentFaculty.h"
 using namespace std;
 
 template <typename T>
@@ -18,6 +19,9 @@ public:
     bool contains(T data);
     void printTreeInOrder();
     void printTreePostOrder();
+    void writeTreetoFile(ofstream& file);
+    // create a get function for the DatabaseSystem class
+    T get(int id);
     T getMin();
     T getMax();
 
@@ -29,6 +33,7 @@ private:
     bool containsHelper(LBTreeNode<T>* subTreeRoot, T data);
     void printTreeInOrderHelper(LBTreeNode<T>* subTreeRoot);
     void printTreePostOrderHelper(LBTreeNode<T>* subTreeRoot);
+    void writeTreetoFileHelper(LBTreeNode<T>* subTreeRoot, ofstream& file);
     T getMinHelper(LBTreeNode<T>* subTreeRoot);
     T getMaxHelper(LBTreeNode<T>* subTreeRoot);
     void findTarget(T key, LBTreeNode<T>*& target, LBTreeNode<T>*& parent);
@@ -140,11 +145,68 @@ void LBBST<T>::printTreePostOrder() {
 }
 
 template <typename T>
+inline void LBBST<T>::writeTreetoFile(ofstream &file)
+{
+    // write the tree to the file
+    writeTreetoFileHelper(m_root, file);
+}
+
+template <typename T>
+T LBBST<T>::get(int id) {
+    LBTreeNode<T>* target = m_root;
+    LBTreeNode<T>* parent = NULL;
+
+    string extractType = typeid(target->getData()).name();
+    extractType = extractType.substr(1);
+
+
+    if (extractType == "Student") {
+        while (target != NULL && target->getData().getID() != id) {
+            parent = target;
+            if (id < target->getData().getID()) {
+                target = target->m_left;
+            } else {
+                target = target->m_right;
+            }
+        }
+        if (target == NULL) {
+            return T();
+        }
+    } else if (extractType == "Faculty") {
+        while (target != NULL && target->getData().getID() != id) {
+            parent = target;
+            if (id < target->getData().getID()) {
+                target = target->m_left;
+            } else {
+                target = target->m_right;
+            }
+        }
+        if (target == NULL) {
+            cout << "no target found" << endl;
+            return T();
+        }
+    }
+
+    // cout << "found" << target->getData() << endl;
+    return target->getData();
+}
+
+template <typename T>
 void LBBST<T>::printTreePostOrderHelper(LBTreeNode<T>* subTreeRoot) {
     if (subTreeRoot != NULL) {
         printTreePostOrderHelper(subTreeRoot->m_left);
         printTreePostOrderHelper(subTreeRoot->m_right);
         cout << subTreeRoot->getData() << endl;
+    }
+}
+
+template <typename T>
+inline void LBBST<T>::writeTreetoFileHelper(LBTreeNode<T> *subTreeRoot, ofstream &file)
+{
+    if (subTreeRoot != NULL) {
+        writeTreetoFileHelper(subTreeRoot->m_left, file);
+        writeTreetoFileHelper(subTreeRoot->m_right, file);
+        file << subTreeRoot->getData() << endl;
     }
 }
 
@@ -191,58 +253,88 @@ void LBBST<T>::findTarget(T key, LBTreeNode<T>*& target, LBTreeNode<T>*& parent)
 template <typename T>
 LBTreeNode<T>* LBBST<T>::getSuccessor(LBTreeNode<T>* rightChild) {
     LBTreeNode<T>* successor = rightChild;
-    while (successor->m_left != NULL) {
+    LBTreeNode<T>* parent = nullptr;
+
+    while (successor->m_left != nullptr) {
+        parent = successor;
         successor = successor->m_left;
     }
+
+    // Update depth values for the parent of the successor
+    if (parent != nullptr) {
+        parent->m_leftDepth = parent->m_left ? parent->m_left->m_leftDepth + parent->m_left->m_rightDepth + 1 : 0;
+        parent->m_rightDepth = parent->m_right ? parent->m_right->m_leftDepth + parent->m_right->m_rightDepth + 1 : 0;
+    }
+
     return successor;
 }
 
 template <typename T>
-void LBBST<T>::remove(T data) {
-    LBTreeNode<T>* target = m_root;
+void LBBST<T>::remove(T d) {
+    // TODO - check if empty
+    LBTreeNode<T>* target = NULL;
     LBTreeNode<T>* parent = NULL;
-    findTarget(data, target, parent);
-
+    
+    // Set target and parent to the root and find the target node to remove
+    target = m_root;
+    findTarget(d, target, parent);
+    
+    // If target is NULL, the element is not in the tree, nothing to do
     if (target == NULL) {
         return;
     }
 
-    // case 1: target has no children
+    // If target has no children (it's a leaf)
     if (target->m_left == NULL && target->m_right == NULL) {
-        if (parent == NULL) {
+        if (target == m_root) {
+            // It's the root
             m_root = NULL;
-        } else if (parent->m_left == target) {
-            parent->m_left = NULL;
         } else {
-            parent->m_right = NULL;
+            // It's not the root
+            if (target == parent->m_left) {
+                parent->m_left = NULL;
+            } else {
+                parent->m_right = NULL;
+            }
         }
-        delete target;
-        --m_size;
     }
-    // case 2: target has one child
-    else if (target->m_left == NULL || target->m_right == NULL) {
-        LBTreeNode<T>* child = target->m_left;
-        if (target->m_right != NULL) {
+    // If target has two children
+    else if (target->m_left != NULL && target->m_right != NULL) {
+        // Get the successor of the target node
+        LBTreeNode<T>* suc = getSuccessor(target->m_right);
+        T value = suc->m_data;
+        
+        // Recursively remove the successor node
+        remove(value);
+        
+        // Update the target data with the successor's data
+        target->m_data = value;
+    }
+    // If target has one child
+    else {
+        // Determine the child node
+        LBTreeNode<T>* child;
+        if (target->m_left != NULL) {
+            child = target->m_left;
+        } else {
             child = target->m_right;
         }
 
-        if (parent == NULL) {
+        // Update pointers in the tree
+        if (target == m_root) {
             m_root = child;
-        } else if (parent->m_left == target) {
-            parent->m_left = child;
         } else {
-            parent->m_right = child;
+            if (target == parent->m_left) {
+                parent->m_left = child;
+            } else {
+                parent->m_right = child;
+            }
         }
-        delete target;
-        --m_size;
     }
-    // case 3: target has two children
-    else {
-        LBTreeNode<T>* successor = getSuccessor(target->m_right);
-        T successorData = successor->getData();
-        remove(successorData);
-        target->m_data = successorData;
-    }
+
+    // Decrease the size of the tree
+    --m_size;
 }
+
 
 #endif

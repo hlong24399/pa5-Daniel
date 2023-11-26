@@ -1,6 +1,22 @@
 {
     "files.associations": {
         "xstring": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "memory": "cpp",
+        "istream": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "compare": "cpp",
+        "limits": "cpp",
+        "ostream": "cpp",
+        "numeric": "cpp",
+        "streambuf": "cpp",
+        "iostream": "cpp",
+        "typeinfo": "cpp",
+        "fstream": "cpp",
+        "iosfwd": "cpp"
     }
 }
